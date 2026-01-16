@@ -7,6 +7,7 @@ import Modal from "../components/Modal";
 import ProductForm from "../components/ProductForm";
 import StatsBar from "../components/StatsBar";
 import ProductCard from "../components/ProductCard";
+import DeleteConfirm from "../components/DeleteConfirm";
 
 export default function Dashboard() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -20,6 +21,10 @@ export default function Dashboard() {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [editProduct, setEditProduct] = useState<Product | null>(null);
+const [deleteProduct, setDeleteProduct] = useState<Product | null>(null);
+const [deleteLoading, setDeleteLoading] = useState(false);
+
 
   const fetchProducts = async () => {
     setError("");
@@ -176,7 +181,12 @@ border border-white/60 p-4">
               ) : (
                 <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {filtered.map((p) => (
-                    <ProductCard key={p.id} product={p} />
+                   <ProductCard
+  key={p.id}
+  product={p}
+  onEdit={(prod) => setEditProduct(prod)}
+  onDelete={(prod) => setDeleteProduct(prod)}
+/>
                   ))}
                 </div>
               )}
@@ -184,16 +194,47 @@ border border-white/60 p-4">
           </div>
         </div>
       </div>
+      
 
       {/* Modal */}
-      <Modal open={openAdd} title="Add a Product" onClose={() => setOpenAdd(false)}>
-        <ProductForm
-          onCreated={() => {
-            fetchProducts();
-            setOpenAdd(false);
-          }}
-        />
-      </Modal>
+    <Modal
+  open={!!editProduct}
+  title="Edit Product"
+  onClose={() => setEditProduct(null)}
+>
+  <ProductForm
+    product={editProduct}
+    onSaved={() => {
+      fetchProducts();
+      setEditProduct(null);
+    }}
+  />
+</Modal>
+<Modal
+  open={!!deleteProduct}
+  title="Confirm Delete"
+  onClose={() => setDeleteProduct(null)}
+>
+  <DeleteConfirm
+    title={`Delete "${deleteProduct?.name}"?`}
+    loading={deleteLoading}
+    onCancel={() => setDeleteProduct(null)}
+    onConfirm={async () => {
+      if (!deleteProduct) return;
+
+      try {
+        setDeleteLoading(true);
+        await api.delete(`/products/${deleteProduct.id}`);
+        setDeleteProduct(null);
+        fetchProducts();
+      } catch {
+        alert("Failed to delete product");
+      } finally {
+        setDeleteLoading(false);
+      }
+    }}
+  />
+</Modal>
     </div>
   );
 }

@@ -1,11 +1,15 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import api from "../api/axios";
+import type { Product } from "../types/product";
 
 type Props = {
-  onCreated: () => void;
+  onSaved: () => void;
+  product?: Product | null; // ✅ if passed => edit mode
 };
 
-export default function ProductForm({ onCreated }: Props) {
+export default function ProductForm({ onSaved, product }: Props) {
+  const isEdit = !!product;
+
   const [name, setName] = useState("");
   const [brand, setBrand] = useState("");
   const [purchaseDate, setPurchaseDate] = useState("");
@@ -15,6 +19,16 @@ export default function ProductForm({ onCreated }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+
+  useEffect(() => {
+    if (product) {
+      setName(product.name);
+      setBrand(product.brand || "");
+      setPurchaseDate(product.purchaseDate);
+      setWarrantyMonths(product.warrantyMonths);
+      setReceiptUrl(product.receiptUrl || "");
+    }
+  }, [product]);
 
   const resetForm = () => {
     setName("");
@@ -37,28 +51,36 @@ export default function ProductForm({ onCreated }: Props) {
     try {
       setLoading(true);
 
-      await api.post("/products", {
+      const payload = {
         name,
         brand,
         purchaseDate,
         warrantyMonths,
         receiptUrl: receiptUrl || null,
-      });
+      };
 
-      setSuccess("✅ Product added!");
-      resetForm();
-      onCreated();
-    } catch (err: any) {
-      setError("Failed to add product. Check backend or token.");
+      if (isEdit && product) {
+        await api.put(`/products/${product.id}`, payload);
+        setSuccess("✅ Product updated!");
+      } else {
+        await api.post(`/products`, payload);
+        setSuccess("✅ Product added!");
+        resetForm();
+      }
+
+      onSaved();
+    } catch {
+      setError(isEdit ? "Failed to update product" : "Failed to add product");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    
-    <div className="bg-white rounded-2xl shadow p-5">
-      <h2 className="text-lg font-bold mb-4">Add Product</h2>
+    <div className="bg-white rounded-2xl">
+      <h2 className="text-lg font-bold mb-4">
+        {isEdit ? "Edit Product" : "Add Product"}
+      </h2>
 
       {error && (
         <div className="mb-3 bg-red-100 text-red-700 p-3 rounded-xl text-sm">
@@ -133,16 +155,18 @@ export default function ProductForm({ onCreated }: Props) {
             disabled={loading}
             className="bg-black text-white px-4 py-2 rounded-xl font-semibold hover:opacity-90 disabled:opacity-50"
           >
-            {loading ? "Adding..." : "Add Product"}
+            {loading ? "Saving..." : isEdit ? "Update" : "Add Product"}
           </button>
 
-          <button
-            type="button"
-            onClick={resetForm}
-            className="border px-4 py-2 rounded-xl font-semibold hover:bg-gray-50"
-          >
-            Reset
-          </button>
+          {!isEdit && (
+            <button
+              type="button"
+              onClick={resetForm}
+              className="border px-4 py-2 rounded-xl font-semibold hover:bg-gray-50"
+            >
+              Reset
+            </button>
+          )}
         </div>
       </form>
     </div>
