@@ -235,6 +235,18 @@ border border-white/60 p-4">
     }}
   />
 </Modal>
+<Modal
+  open={openAdd}
+  title="Add Product"
+  onClose={() => setOpenAdd(false)}
+>
+  <ProductForm
+    onSaved={() => {
+      fetchProducts();
+      setOpenAdd(false);
+    }}
+  />
+</Modal>
     </div>
   );
 }
